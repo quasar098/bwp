@@ -1,0 +1,7 @@
+main: templatepackage.mainclass
+name: bedwarsPracticePlugin
+version: 1.0.6
+commands:
+  tgttos:
+    usage: /tgttos
+    description: tgttos mode
