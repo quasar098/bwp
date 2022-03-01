@@ -1,4 +1,4 @@
-package templatepackage.events;
+package bwplugin.events;
 
 import org.bukkit.*;
 import org.bukkit.entity.EntityType;
@@ -27,9 +27,11 @@ public class playerjoin implements Listener {
     private static ArrayList<Location> myList = new ArrayList<>();
     private static boolean tgttos = false;
     private static Location orgLoc = null;
+    private long startTime = 0;
+    private static Location checkpointLoc = null;
 
     @EventHandler
-    public static void onPlayerJoin(PlayerJoinEvent event) {
+    public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
         Location loc2 = player.getWorld().getSpawnLocation();
@@ -41,10 +43,11 @@ public class playerjoin implements Listener {
         player.sendMessage("Survival is for playing it");
 
         player.teleport(loc2);
+        setStartTime(System.currentTimeMillis());
     }
 
     @EventHandler
-    public static void onWalk(PlayerMoveEvent event) {
+    public void onWalk(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         World world = player.getWorld();
         Location loc2 = world.getSpawnLocation();
@@ -60,6 +63,9 @@ public class playerjoin implements Listener {
         if (world.getBlockAt(loc).getType() == Material.GOLD_BLOCK && player.getGameMode() != GameMode.CREATIVE) {
             if (!tgttos) {
                 player.sendMessage("You completed the course! Good job");
+                player.sendMessage("You took " +
+                        ((float) (System.currentTimeMillis()-startTime))/1000
+                        + " seconds to complete the course");
                 player.teleport(orgLoc);
                 player.playSound(player.getLocation(), Sound.LEVEL_UP, 1, 1);
             } else {
@@ -70,10 +76,12 @@ public class playerjoin implements Listener {
                 }
             }
             player.getWorld().setSpawnLocation(orgLoc.getBlockX(), orgLoc.getBlockY(), orgLoc.getBlockZ());
+            checkpointLoc = orgLoc.clone();
             for (Location location : myList) {
                 world.getBlockAt(location).setType(Material.AIR);
             }
             myList.clear();
+            setStartTime(System.currentTimeMillis());
         }
         // coal
         else if (world.getBlockAt(loc).getType() == Material.COAL_BLOCK && player.getGameMode() != GameMode.CREATIVE) {
@@ -85,7 +93,9 @@ public class playerjoin implements Listener {
                 }
                 myList.clear();
             }
-        } else if (player.getLocation().getY() < 0) {
+            setStartTime(System.currentTimeMillis());
+        } else if (player.getLocation().getY() < 0) { // falls in void
+            setStartTime(System.currentTimeMillis());
             player.teleport(loc2);
             if (player.getGameMode() != GameMode.CREATIVE) {
                 player.getInventory().clear();
@@ -97,13 +107,15 @@ public class playerjoin implements Listener {
                     myList.clear();
                 }
             }
+            // diamond block
         } else if (world.getBlockAt(loc).getType() == Material.DIAMOND_BLOCK && player.getGameMode() != GameMode.CREATIVE) {
             Location roundLoc = player.getLocation();
             roundLoc.setX((int) roundLoc.getX() - 1);
             roundLoc.setY((int) roundLoc.getY());
             roundLoc.setZ((int) roundLoc.getZ() - 1);
             if (!compareLocations(world.getSpawnLocation(), roundLoc)) {
-                world.setSpawnLocation((int) player.getLocation().getX() - 1, (int) player.getLocation().getY(), (int) player.getLocation().getZ() - 1);
+                world.setSpawnLocation((int) player.getLocation().getX()-1, (int) player.getLocation().getY(), (int) player.getLocation().getZ()-1);
+                checkpointLoc = new Location(world, player.getLocation().getX() - 1, player.getLocation().getY(), player.getLocation().getZ() - 1);
                 player.playSound(player.getLocation(), Sound.NOTE_PLING, 1, 1);
                 player.sendMessage(ChatColor.GREEN + "Checkpoint!");
             }
@@ -156,7 +168,7 @@ public class playerjoin implements Listener {
     }
 
     @EventHandler
-    public static void onRespawn(PlayerRespawnEvent event) {
+    public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
 
         if (player.getGameMode() != GameMode.CREATIVE) {
@@ -169,10 +181,11 @@ public class playerjoin implements Listener {
                 myList.clear();
             }
         }
+        setStartTime(System.currentTimeMillis());
     }
 
     @EventHandler
-    public static void changeGameMode(PlayerGameModeChangeEvent event) {
+    public void changeGameMode(PlayerGameModeChangeEvent event) {
         if (event.getNewGameMode() == GameMode.CREATIVE) {
             for (Location location : myList) {
                 event.getPlayer().getWorld().getBlockAt(location).setType(Material.AIR);
@@ -196,23 +209,28 @@ public class playerjoin implements Listener {
             event.getPlayer().getInventory().clear();
             event.getPlayer().getInventory().addItem(new ItemStack(Material.WOOL, 64));
         }
+        setStartTime(System.currentTimeMillis());
     }
     @EventHandler
-    public static void serverStop(PluginDisableEvent event) {
+    public void serverStop(PluginDisableEvent event) {
         for (Location location : myList) {
             event.getPlugin().getServer().getWorld("world").getBlockAt(location).setType(Material.AIR);
         }
         myList.clear();
         World world = event.getPlugin().getServer().getWorld("world");
         world.setSpawnLocation((int) orgLoc.getX(), (int) orgLoc.getY(), (int) orgLoc.getZ());
+        checkpointLoc = orgLoc.clone();
+        setStartTime(System.currentTimeMillis());
     }
     @EventHandler
-    public static void serverStart(PluginEnableEvent event) {
+    public void serverStart(PluginEnableEvent event) {
         World world = event.getPlugin().getServer().getWorld("world");
         orgLoc = world.getSpawnLocation();
+        checkpointLoc = orgLoc.clone();
+        setStartTime(System.currentTimeMillis());
     }
     @EventHandler
-    public static void onWea(WeatherChangeEvent event) {
+    public void onWea(WeatherChangeEvent event) {
         if (event.toWeatherState()) {
             event.setCancelled(true);
         }
@@ -222,5 +240,8 @@ public class playerjoin implements Listener {
     }
     public static void setTGTTOS(Boolean tgttosvalue) {
         tgttos = tgttosvalue;
+    }
+    public void setStartTime(long time) {
+        startTime = time;
     }
 }

@@ -1,4 +1,4 @@
-main: templatepackage.mainclass
+main: bwplugin.mainclass
 name: bedwarsPracticePlugin
 version: 1.0.6
 commands:

@@ -1,9 +1,9 @@
-package templatepackage;
+package bwplugin;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
-import templatepackage.commands.tgttos;
-import templatepackage.events.playerjoin;
+import bwplugin.commands.tgttos;
+import bwplugin.events.playerjoin;
 
 @SuppressWarnings("unused")
 public class mainclass extends JavaPlugin {
